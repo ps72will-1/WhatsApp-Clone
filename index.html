@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Clone</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Loading overlay -->
+        <div id="loading" class="loading hidden">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div id="auth-section" class="authentication">
+            <div class="auth-form bg-theme">
+                <h2 class="text-center text-xl font-bold mb-6">WhatsApp Clone</h2>
+                <div class="auth-tabs">
+                    <div class="auth-tab active" id="phone-tab">Phone</div>
+                    <div class="auth-tab" id="email-tab">Email</div>
+                </div>
+
+                <!-- Phone login form -->
+                <div id="phone-form">
+                    <div class="auth-form-group">
+                        <label for="country-code">Country</label>
+                        <select id="country-code">
+                            <option value="+1">United States (+1)</option>
+                            <option value="+44">United Kingdom (+44)</option>
+                            <option value="+91">India (+91)</option>
+                            <option value="+61">Australia (+61)</option>
+                            <option value="+86">China (+86)</option>
+                            <option value="+49">Germany (+49)</option>
+                            <option value="+33">France (+33)</option>
+                            <option value="+81">Japan (+81)</option>
+                            <option value="+7">Russia (+7)</option>
+                            <option value="+55">Brazil (+55)</option>
+                        </select>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="phone-number">Phone Number</label>
+                        <input type="tel" id="phone-number" placeholder="Enter your phone number" class="text-base">
+                    </div>
+                    <button id="phone-submit" class="auth-submit">Send verification code</button>
+
+                    <div id="otp-form" class="hidden mt-4">
+                        <div class="auth-form-group">
+                            <label for="otp-code">Verification Code</label>
+                            <input type="text" id="otp-code" placeholder="Enter OTP code" class="text-base">
+                        </div>
+                        <button id="otp-submit" class="auth-submit">Verify</button>
+                    </div>
+                </div>
+
+                <!-- Email login form -->
+                <div id="email-form" class="hidden">
+                    <div class="auth-form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="Enter your email" class="text-base">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Enter your password" class="text-base">
+                    </div>
+                    <button id="email-submit" class="auth-submit">Login</button>
+                    <div class="mt-4 text-center">
+                        <a href="#" id="register-link" class="text-blue-500">Don't have an account? Register</a>
+                    </div>
+                </div>
+
+                <!-- Register form -->
+                <div id="register-form" class="hidden">
+                    <div class="auth-form-group">
+                        <label for="reg-name">Full Name</label>
+                        <input type="text" id="reg-name" placeholder="Enter your full name" class="text-base">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" placeholder="Enter your email" class="text-base">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" placeholder="Create a password" class="text-base">
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="reg-confirm-password">Confirm Password</label>
+                        <input type="password" id="reg-confirm-password" placeholder="Confirm your password" class="text-base">
+                    </div>
+                    <button id="register-submit" class="auth-submit">Register</button>
+                    <div class="mt-4 text-center">
+                        <a href="#" id="login-link" class="text-blue-500">Already have an account? Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Section -->
+        <div id="app-section" class="hidden">
+            <div class="tabs">
+                <div class="tab active" data-tab="chats">Chats</div>
+                <div class="tab" data-tab="calls">Calls</div>
+                <div class="tab" data-tab="profile">Profile</div>
+                <div class="tab admin-tab hidden" data-tab="admin">Admin</div>
+            </div>
+
+            <!-- Chats Tab -->
+            <div id="chats-tab" class="main-container tab-content">
+                <div class="sidebar">
+                    <div class="panel-heading">
+                        <div class="panel-title">Chats</div>
+                        <div class="panel-actions">
+                            <button id="new-chat-btn"><i class="fas fa-edit"></i></button>
+                            <button id="more-options-btn"><i class="fas fa-ellipsis-v"></i></button>
+                        </div>
+                    </div>
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search or start new chat">
+                    </div>
+                    <div class="contact-list" id="contact-list">
+                        <!-- Contacts will be loaded here dynamically -->
+                    </div>
+                </div>
+                <div class="content-area" id="chat-content">
+                    <div class="panel-heading">
+                        <div class="panel-title" id="chat-with">Select a chat to start messaging</div>
+                        <div class="panel-actions">
+                            <button id="call-btn"><i class="fas fa-phone"></i></button>
+                            <button id="video-btn"><i class="fas fa-video"></i></button>
+                        </div>
+                    </div>
+                    <div class="chat-area" id="chat-area">
+                        <!-- Messages will be loaded here dynamically -->
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" class="message-input" id="message-input" placeholder="Type a message">
+                        <button class="send-button" id="send-message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calls Tab -->
+            <div id="calls-tab" class="tab-content hidden">
+                <div class="calls-container">
+                    <div class="calls-list">
+                        <div class="panel-heading">
+                            <div class="panel-title">Calls</div>
+                            <div class="panel-actions">
+                                <button id="new-call-btn"><i class="fas fa-phone-plus"></i></button>
+                            </div>
+                        </div>
+                        <div class="search-bar">
+                            <input type="text" class="search-input" placeholder="Search calls">
+                        </div>
+                        <div id="calls-list">
+                            <!-- Call history will be loaded here dynamically -->
+                        </div>
+                    </div>
+                    <div class="call-active-area" id="call-active-area">
+                        <div class="text-center">
+                            <i class="fas fa-phone-alt fa-5x mb-4 opacity-50"></i>
+                            <h2 class="text-xl font-bold mb-2">Start a Call</h2>
+                            <p>Select a contact from the left to start a call</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile-tab" class="tab-content hidden">
+                <div class="profile-section">
+                    <div class="profile-avatar" id="profile-avatar">JS</div>
+                    <h2 class="text-center text-xl font-bold mb-4" id="profile-name">John Smith</h2>
+                    
+                    <div class="mb-6">
+                        <h3 class="font-bold mb-2">Account Information</h3>
+                        <div class="bg-theme p-4 rounded shadow-sm">
+                            <div class="mb-3">
+                                <label class="block text-sm opacity-70 mb-1">Phone Number</label>
+                                <div id="profile-phone">+1 234 567 8900</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="block text-sm opacity-70 mb-1">Email</label>
+                                <div id="profile-email">john.smith@example.com</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm opacity-70 mb-1">Status</label>
+                                <div class="flex items-center">
+                                    <span class="status-circle status-online"></span>
+                                    <span id="profile-status">Online</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="font-bold mb-2">Settings</h3>
+                        <div class="bg-theme p-4 rounded shadow-sm">
+                            <div class="mb-3">
+                                <label class="block mb-2">Status Message</label>
+                                <textarea id="status-message" rows="2" class="w-full p-2 border rounded text-base">Available</textarea>
+                                <button id="update-status" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Update</button>
+                            </div>
+                            <div class="mb-3">
+                                <label class="block mb-2">Notification Settings</label>
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="notification-sound" checked class="mr-2">
+                                    <label for="notification-sound">Message Sound</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="notification-vibrate" checked class="mr-2">
+                                    <label for="notification-vibrate">Vibration</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="logout-btn" class="w-full bg-red-500 text-white py-3 rounded">Logout</button>
+                </div>
+            </div>
+
+            <!-- Admin Tab -->
+            <div id="admin-tab" class="tab-content hidden">
+                <div class="admin-panel">
+                    <h2 class="text-2xl font-bold mb-6">Admin Dashboard</h2>
+                    
+                    <div class="admin-section">
+                        <h3 class="admin-heading">User Management</h3>
+                        <div class="overflow-x-auto">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <!-- User data will be loaded here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="admin-section">
+                        <h3 class="admin-heading">Add New User</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="admin-form-group">
+                                <label for="admin-user-name">Name</label>
+                                <input type="text" id="admin-user-name" class="text-base">
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="admin-user-email">Email</label>
+                                <input type="email" id="admin-user-email" class="text-base">
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="admin-user-phone">Phone</label>
+                                <input type="tel" id="admin-user-phone" class="text-base">
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="admin-user-role">Role</label>
+                                <select id="admin-user-role" class="text-base">
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="add-user-btn" class="admin-button">Add User</button>
+                    </div>
+                    
+                    <div class="admin-section">
+                        <h3 class="admin-heading">System Statistics</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-theme p-4 rounded shadow-sm">
+                                <div class="text-lg font-bold" id="total-users">0</div>
+                                <div>Total Users</div>
+                            </div>
+                            <div class="bg-theme p-4 rounded shadow-sm">
+                                <div class="text-lg font-bold" id="active-users">0</div>
+                                <div>Active Users</div>
+                            </div>
+                            <div class="bg-theme p-4 rounded shadow-sm">
+                                <div class="text-lg font-bold" id="total-messages">0</div>
+                                <div>Messages Today</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="chat.js"></script>
+    <script src="calls.js"></script>
+    <script src="admin.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
