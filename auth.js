@@ -1,323 +1,481 @@
-// Demo user data (would be replaced with Firebase data in a real application)
-const demoUsers = [
-    { id: 'user1', name: 'John Smith', email: 'john@example.com', phone: '+1 234 567 8900', status: 'online', isAdmin: true },
-    { id: 'user2', name: 'Alice Johnson', email: 'alice@example.com', phone: '+1 987 654 3210', status: 'online', isAdmin: false },
-    { id: 'user3', name: 'Bob Wilson', email: 'bob@example.com', phone: '+44 123 456 7890', status: 'offline', isAdmin: false },
-    { id: 'user4', name: 'Emily Davis', email: 'emily@example.com', phone: '+61 234 567 890', status: 'online', isAdmin: false },
-    { id: 'user5', name: 'Michael Brown', email: 'michael@example.com', phone: '+49 987 654 321', status: 'offline', isAdmin: false }
-];
-
-// DOM Elements
-const authSection = document.getElementById('auth-section');
-const phoneTab = document.getElementById('phone-tab');
-const emailTab = document.getElementById('email-tab');
-const phoneForm = document.getElementById('phone-form');
-const emailForm = document.getElementById('email-form');
-const registerForm = document.getElementById('register-form');
-const otpForm = document.getElementById('otp-form');
-const registerLink = document.getElementById('register-link');
-const loginLink = document.getElementById('login-link');
-
-// Setup Auth Event Listeners
-function setupAuthEventListeners() {
-    // Tab switching
-    phoneTab.addEventListener('click', () => {
-        phoneTab.classList.add('active');
-        emailTab.classList.remove('active');
-        phoneForm.classList.remove('hidden');
-        emailForm.classList.add('hidden');
-        registerForm.classList.add('hidden');
-    });
+// Authentication Module
+const Auth = (function() {
+    // Private variables and functions
+    let currentUser = null;
     
-    emailTab.addEventListener('click', () => {
-        emailTab.classList.add('active');
-        phoneTab.classList.remove('active');
-        emailForm.classList.remove('hidden');
-        phoneForm.classList.add('hidden');
-        registerForm.classList.add('hidden');
-    });
+    // DOM Elements
+    const authScreen = document.getElementById('auth-screen');
+    const phoneAuth = document.getElementById('phone-auth');
+    const emailAuth = document.getElementById('email-auth');
+    const emailSignup = document.getElementById('email-signup');
+    const otpAuth = document.getElementById('otp-auth');
+    const userInfo = document.getElementById('user-info');
+    const adminLogin = document.getElementById('admin-login');
     
-    // Register link
-    registerLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        emailForm.classList.add('hidden');
-        registerForm.classList.remove('hidden');
-    });
+    // Auth tabs
+    const phoneAuthTab = document.getElementById('phone-auth-tab');
+    const emailAuthTab = document.getElementById('email-auth-tab');
     
-    // Login link
-    loginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        registerForm.classList.add('hidden');
-        emailForm.classList.remove('hidden');
-    });
+    // Phone Auth Elements
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const verifyOtpBtn = document.getElementById('verify-otp-btn');
+    const changeNumberBtn = document.getElementById('change-number-btn');
+    const phoneDisplay = document.getElementById('phone-display');
+    const phoneNumber = document.getElementById('phone-number');
+    const countryCodeSelector = document.getElementById('country-code-selector');
+    const countrySelect = document.getElementById('country-select');
+    const selectedCode = document.getElementById('selected-code');
+    const selectedFlag = document.getElementById('selected-flag');
+    const otpInputs = document.querySelectorAll('.otp-input');
+    const resendTimer = document.getElementById('resend-timer');
     
-    // Phone verification
-    document.getElementById('phone-submit').addEventListener('click', () => {
-        const phoneNumber = document.getElementById('phone-number').value;
-        const countryCode = document.getElementById('country-code').value;
+    // Email Auth Elements
+    const authEmail = document.getElementById('auth-email');
+    const authPassword = document.getElementById('auth-password');
+    const emailSigninBtn = document.getElementById('email-signin-btn');
+    const forgotPassword = document.getElementById('forgot-password');
+    const showEmailSignup = document.getElementById('show-email-signup');
+    
+    // Email Signup Elements
+    const signupName = document.getElementById('signup-name');
+    const signupEmail = document.getElementById('signup-email');
+    const signupPassword = document.getElementById('signup-password');
+    const signupConfirmPassword = document.getElementById('signup-confirm-password');
+    const emailSignupBtn = document.getElementById('email-signup-btn');
+    const showEmailSignin = document.getElementById('show-email-signin');
+    
+    // Account Setup Elements
+    const setupAccountBtn = document.getElementById('setup-account-btn');
+    const userName = document.getElementById('user-name');
+    const profileUpload = document.getElementById('profile-upload');
+    const profilePreview = document.getElementById('profile-preview');
+    const profilePlaceholder = document.getElementById('profile-placeholder');
+    
+    // Admin Login Elements
+    const adminLoginBtn = document.getElementById('admin-login-btn');
+    const adminLoginLink = document.getElementById('admin-login-link');
+    const backToUserLogin = document.getElementById('back-to-user-login');
+    const adminUsername = document.getElementById('admin-username');
+    const adminPassword = document.getElementById('admin-password');
+    
+    // Profile Elements
+    const userAvatar = document.getElementById('user-avatar');
+    const myStatusAvatar = document.getElementById('my-status-avatar');
+    const settingsProfileImg = document.getElementById('settings-profile-img');
+    const settingsUserName = document.getElementById('settings-user-name');
+    const settingsUserStatus = document.getElementById('settings-user-status');
+    
+    // Initialize event listeners
+    function init() {
+        // Auth method tabs
+        phoneAuthTab.addEventListener('click', switchToPhoneAuth);
+        emailAuthTab.addEventListener('click', switchToEmailAuth);
         
-        if (phoneNumber.trim() === '') {
-            alert('Please enter a valid phone number');
-            return;
+        // Phone auth
+        sendOtpBtn.addEventListener('click', handleSendOTP);
+        verifyOtpBtn.addEventListener('click', handleVerifyOTP);
+        changeNumberBtn.addEventListener('click', handleChangeNumber);
+        
+        // OTP input handling
+        otpInputs.forEach(input => {
+            input.addEventListener('input', handleOTPInput);
+            input.addEventListener('keydown', handleOTPKeydown);
+        });
+        
+        // Email auth
+        emailSigninBtn.addEventListener('click', handleEmailSignIn);
+        forgotPassword.addEventListener('click', handleForgotPassword);
+        showEmailSignup.addEventListener('click', switchToEmailSignup);
+        
+        // Email signup
+        emailSignupBtn.addEventListener('click', handleEmailSignUp);
+        showEmailSignin.addEventListener('click', switchToEmailAuth);
+        
+        // Account setup
+        setupAccountBtn.addEventListener('click', handleSetupAccount);
+        profileUpload.addEventListener('change', handleProfileUpload);
+        
+        // Admin login
+        adminLoginBtn.addEventListener('click', handleAdminLogin);
+        adminLoginLink.addEventListener('click', showAdminLogin);
+        backToUserLogin.addEventListener('click', showPhoneAuth);
+        
+        // Country code selector
+        countryCodeSelector.addEventListener('click', toggleCountrySelect);
+        document.querySelectorAll('.country-option').forEach(option => {
+            option.addEventListener('click', selectCountryCode);
+        });
+    }
+    
+    // Authentication Method Switching
+    function switchToPhoneAuth() {
+        // Update tab styles
+        phoneAuthTab.classList.remove('bg-gray-200', 'text-gray-700');
+        phoneAuthTab.classList.add('bg-green-500', 'text-white');
+        emailAuthTab.classList.remove('bg-green-500', 'text-white');
+        emailAuthTab.classList.add('bg-gray-200', 'text-gray-700');
+        
+        // Show phone auth form, hide others
+        phoneAuth.classList.remove('hidden');
+        emailAuth.classList.add('hidden');
+        emailSignup.classList.add('hidden');
+    }
+    
+    function switchToEmailAuth() {
+        // Update tab styles
+        emailAuthTab.classList.remove('bg-gray-200', 'text-gray-700');
+        emailAuthTab.classList.add('bg-green-500', 'text-white');
+        phoneAuthTab.classList.remove('bg-green-500', 'text-white');
+        phoneAuthTab.classList.add('bg-gray-200', 'text-gray-700');
+        
+        // Show email auth form, hide others
+        emailAuth.classList.remove('hidden');
+        phoneAuth.classList.add('hidden');
+        emailSignup.classList.add('hidden');
+    }
+    
+    function switchToEmailSignup() {
+        emailSignup.classList.remove('hidden');
+        emailAuth.classList.add('hidden');
+    }
+    
+    // Phone Authentication Handlers
+    function handleSendOTP() {
+        const phone = phoneNumber.value.trim();
+        if (phone) {
+            simulateOTPSend(phone);
+        } else {
+            Utilities.showToast('Please enter a valid phone number', 'error');
         }
-        
-        // In a real app, this would send a verification code via Firebase
-        // For demo purposes, we'll show the OTP form
-        showLoading();
-        
-        // Simulate Firebase phone auth
-        // In a real app, you would use:
-        // const appVerifier = new firebase.auth.RecaptchaVerifier('phone-submit', { size: 'invisible' });
-        // auth.signInWithPhoneNumber(countryCode + phoneNumber, appVerifier)
-        //     .then((confirmationResult) => {
-        //         window.confirmationResult = confirmationResult;
-        //         hideLoading();
-        //         otpForm.classList.remove('hidden');
-        //     })
-        //     .catch((error) => {
-        //         hideLoading();
-        //         alert('Error sending verification code: ' + error.message);
-        //     });
-        
-        setTimeout(() => {
-            hideLoading();
-            otpForm.classList.remove('hidden');
-        }, 1500);
-    });
+    }
     
-    // OTP verification
-    document.getElementById('otp-submit').addEventListener('click', () => {
-        const otpCode = document.getElementById('otp-code').value;
+    function simulateOTPSend(phoneNum) {
+        // Display the phone number in the OTP screen
+        phoneDisplay.textContent = selectedCode.textContent + ' ' + phoneNum;
         
-        if (otpCode.trim() === '') {
-            alert('Please enter the verification code');
-            return;
-        }
+        // Show OTP input screen
+        phoneAuth.classList.add('hidden');
+        otpAuth.classList.remove('hidden');
         
-        // In a real app, this would verify the OTP via Firebase
-        // For demo purposes, we'll log in the user
-        showLoading();
-        
-        // In a real app, you would use:
-        // window.confirmationResult.confirm(otpCode)
-        //     .then((result) => {
-        //         // User signed in successfully
-        //         const user = result.user;
-        //         // Get or create user profile in Firestore
-        //         return db.collection('users').doc(user.uid).get()
-        //             .then((doc) => {
-        //                 if (doc.exists) {
-        //                     return doc.data();
-        //                 } else {
-        //                     // Create new user
-        //                     const newUser = {
-        //                         name: 'User ' + user.phoneNumber,
-        //                         phone: user.phoneNumber,
-        //                         status: 'online',
-        //                         isAdmin: false,
-        //                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        //                     };
-        //                     return db.collection('users').doc(user.uid).set(newUser)
-        //                         .then(() => newUser);
-        //                 }
-        //             });
-        //     })
-        //     .then((userProfile) => {
-        //         hideLoading();
-        //         loginUser(userProfile);
-        //     })
-        //     .catch((error) => {
-        //         hideLoading();
-        //         alert('Error verifying code: ' + error.message);
-        //     });
-        
-        setTimeout(() => {
-            hideLoading();
-            loginUser(demoUsers[0]); // Log in as the first demo user
-        }, 1500);
-    });
-    
-    // Email login
-    document.getElementById('email-submit').addEventListener('click', () => {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        
-        if (email.trim() === '' || password.trim() === '') {
-            alert('Please enter both email and password');
-            return;
-        }
-        
-        // In a real app, this would authenticate via Firebase
-        showLoading();
-        
-        // In a real app, you would use:
-        // auth.signInWithEmailAndPassword(email, password)
-        //     .then((userCredential) => {
-        //         // Get user profile from Firestore
-        //         return db.collection('users').doc(userCredential.user.uid).get()
-        //             .then((doc) => {
-        //                 if (doc.exists) {
-        //                     return doc.data();
-        //                 } else {
-        //                     throw new Error('User profile not found');
-        //                 }
-        //             });
-        //     })
-        //     .then((userProfile) => {
-        //         hideLoading();
-        //         loginUser(userProfile);
-        //     })
-        //     .catch((error) => {
-        //         hideLoading();
-        //         alert('Error signing in: ' + error.message);
-        //     });
-        
-        setTimeout(() => {
-            hideLoading();
-            // Find a matching user
-            const user = demoUsers.find(u => u.email === email);
-            if (user) {
-                loginUser(user);
-            } else {
-                alert('Invalid email or password');
+        // Start countdown for resend
+        let seconds = 30;
+        const countdownInterval = setInterval(() => {
+            seconds--;
+            resendTimer.textContent = `Resend in ${seconds}s`;
+            
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+                resendTimer.textContent = 'Resend OTP';
+                resendTimer.classList.add('text-blue-600', 'hover:underline', 'cursor-pointer');
+                
+                // Add click event for resend
+                resendTimer.addEventListener('click', () => handleSendOTP());
             }
-        }, 1500);
-    });
-    
-    // Register
-    document.getElementById('register-submit').addEventListener('click', () => {
-        const name = document.getElementById('reg-name').value;
-        const email = document.getElementById('reg-email').value;
-        const password = document.getElementById('reg-password').value;
-        const confirmPassword = document.getElementById('reg-confirm-password').value;
+        }, 1000);
         
-        if (name.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
-            alert('Please fill in all fields');
+        // Focus first OTP input
+        if (otpInputs.length > 0) {
+            otpInputs[0].focus();
+        }
+        
+        Utilities.showToast('OTP sent successfully!', 'success');
+    }
+    
+    function handleVerifyOTP() {
+        let otp = '';
+        otpInputs.forEach(input => {
+            otp += input.value;
+        });
+        
+        if (otp.length === 6) {
+            // Show user info screen for final setup
+            otpAuth.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            // Pre-fill with phone number
+            userName.value = '';
+            Utilities.showToast('OTP verified successfully!', 'success');
+        } else {
+            Utilities.showToast('Please enter a valid 6-digit OTP', 'error');
+        }
+    }
+    
+    function handleOTPInput(e) {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        
+        if (e.target.value && index < 6) {
+            document.querySelector(`.otp-input[data-index="${index + 1}"]`).focus();
+        }
+    }
+    
+    function handleOTPKeydown(e) {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        
+        if (e.key === 'Backspace' && !e.target.value && index > 1) {
+            document.querySelector(`.otp-input[data-index="${index - 1}"]`).focus();
+        }
+    }
+    
+    function handleChangeNumber() {
+        otpAuth.classList.add('hidden');
+        phoneAuth.classList.remove('hidden');
+    }
+    
+    // Email Authentication Handlers
+    function handleEmailSignIn() {
+        const email = authEmail.value.trim();
+        const password = authPassword.value.trim();
+        
+        // Simple validation
+        if (!email) {
+            Utilities.showToast('Please enter your email address', 'error');
+            return;
+        }
+        
+        if (!password) {
+            Utilities.showToast('Please enter your password', 'error');
+            return;
+        }
+        
+        // In a real app, this would connect to your authentication service
+        // For demo purposes, we'll simulate a successful login
+        simulateEmailLogin(email);
+    }
+    
+    function simulateEmailLogin(email) {
+        // Create user object with email info
+        currentUser = {
+            name: email.split('@')[0], // Use part of email as name
+            email: email,
+            avatar: 'https://i.imgur.com/8uuq4DZ.png', // Default avatar
+            status: 'Available',
+            lastSeen: new Date()
+        };
+        
+        // Update UI with user info
+        userAvatar.src = currentUser.avatar;
+        myStatusAvatar.src = currentUser.avatar;
+        settingsProfileImg.src = currentUser.avatar;
+        settingsUserName.textContent = currentUser.name;
+        settingsUserStatus.textContent = currentUser.status;
+        
+        // Switch to chat interface
+        authScreen.classList.add('hidden');
+        document.getElementById('chat-screen').classList.remove('hidden');
+        
+        // Initialize demo chat data
+        Chat.initializeDemoData();
+        
+        Utilities.showToast('Welcome to WhatsApp Web Clone!', 'success');
+    }
+    
+    function handleEmailSignUp() {
+        const name = signupName.value.trim();
+        const email = signupEmail.value.trim();
+        const password = signupPassword.value.trim();
+        const confirmPassword = signupConfirmPassword.value.trim();
+        
+        // Validation
+        if (!name) {
+            Utilities.showToast('Please enter your name', 'error');
+            return;
+        }
+        
+        if (!email) {
+            Utilities.showToast('Please enter your email address', 'error');
+            return;
+        }
+        
+        if (!password) {
+            Utilities.showToast('Please create a password', 'error');
             return;
         }
         
         if (password !== confirmPassword) {
-            alert('Passwords do not match');
+            Utilities.showToast('Passwords do not match', 'error');
             return;
         }
         
-        // In a real app, this would create a user via Firebase
-        showLoading();
+        // In a real app, this would register a new user account
+        // For demo purposes, we'll simulate a successful registration and login
         
-        // In a real app, you would use:
-        // auth.createUserWithEmailAndPassword(email, password)
-        //     .then((userCredential) => {
-        //         // Create user profile in Firestore
-        //         const newUser = {
-        //             name: name,
-        //             email: email,
-        //             status: 'online',
-        //             isAdmin: false,
-        //             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        //         };
-        //         return db.collection('users').doc(userCredential.user.uid).set(newUser)
-        //             .then(() => {
-        //                 return userCredential.user.updateProfile({
-        //                     displayName: name
-        //                 }).then(() => newUser);
-        //             });
-        //     })
-        //     .then((userProfile) => {
-        //         hideLoading();
-        //         loginUser(userProfile);
-        //     })
-        //     .catch((error) => {
-        //         hideLoading();
-        //         alert('Error creating account: ' + error.message);
-        //     });
+        // Create user object
+        currentUser = {
+            name: name,
+            email: email,
+            avatar: 'https://i.imgur.com/8uuq4DZ.png', // Default avatar
+            status: 'Available',
+            lastSeen: new Date()
+        };
         
-        setTimeout(() => {
-            hideLoading();
-            // Create a new user object
-            const newUser = {
-                id: 'user' + (demoUsers.length + 1),
-                name: name,
-                email: email,
-                phone: '',
-                status: 'online',
-                isAdmin: false
+        // Update UI with user info
+        userAvatar.src = currentUser.avatar;
+        myStatusAvatar.src = currentUser.avatar;
+        settingsProfileImg.src = currentUser.avatar;
+        settingsUserName.textContent = currentUser.name;
+        settingsUserStatus.textContent = currentUser.status;
+        
+        // Switch to chat interface
+        authScreen.classList.add('hidden');
+        document.getElementById('chat-screen').classList.remove('hidden');
+        
+        // Initialize demo chat data
+        Chat.initializeDemoData();
+        
+        Utilities.showToast('Account created successfully! Welcome to WhatsApp Web Clone!', 'success');
+    }
+    
+    function handleForgotPassword() {
+        const email = authEmail.value.trim();
+        
+        if (!email) {
+            Utilities.showToast('Please enter your email address', 'error');
+            return;
+        }
+        
+        // In a real app, this would send a password reset email
+        Utilities.showToast('Password reset instructions sent to your email', 'success');
+    }
+    
+    // Account Setup Handlers
+    function handleSetupAccount() {
+        const name = userName.value.trim();
+        
+        if (!name) {
+            Utilities.showToast('Please enter your name', 'error');
+            return;
+        }
+        
+        // Create user object (for phone auth flow)
+        currentUser = {
+            name: name,
+            phone: phoneDisplay.textContent,
+            avatar: profilePreview.src || 'https://i.imgur.com/8uuq4DZ.png',
+            status: 'Available',
+            lastSeen: new Date()
+        };
+        
+        // Update UI with user info
+        userAvatar.src = currentUser.avatar;
+        myStatusAvatar.src = currentUser.avatar;
+        settingsProfileImg.src = currentUser.avatar;
+        settingsUserName.textContent = currentUser.name;
+        settingsUserStatus.textContent = currentUser.status;
+        
+        // Switch to chat interface
+        authScreen.classList.add('hidden');
+        document.getElementById('chat-screen').classList.remove('hidden');
+        
+        // Initialize demo chat data
+        Chat.initializeDemoData();
+        
+        Utilities.showToast('Welcome to WhatsApp Web Clone!', 'success');
+    }
+    
+    // Profile Image Upload
+    function handleProfileUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                profilePreview.src = e.target.result;
+                profilePreview.classList.remove('hidden');
+                profilePlaceholder.classList.add('hidden');
             };
-            
-            demoUsers.push(newUser);
-            loginUser(newUser);
-        }, 1500);
-    });
-}
-
-// Update user status
-function updateUserStatus(userId, status) {
-    // In a real app, this would update the user status in Firestore
-    // db.collection('users').doc(userId).update({
-    //     status: status,
-    //     lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-    // });
-    
-    // For demo, update the local user object
-    const userIndex = demoUsers.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-        demoUsers[userIndex].status = status;
-    }
-}
-
-// Login user
-function loginUser(user) {
-    // Set current user
-    window.currentUser = user;
-    
-    // Update user status to online
-    updateUserStatus(user.id, 'online');
-    
-    // Update profile information
-    const profileAvatar = document.getElementById('profile-avatar');
-    const profileName = document.getElementById('profile-name');
-    const profilePhone = document.getElementById('profile-phone');
-    const profileEmail = document.getElementById('profile-email');
-    
-    profileAvatar.textContent = getInitials(user.name);
-    profileName.textContent = user.name;
-    profilePhone.textContent = user.phone || 'Not provided';
-    profileEmail.textContent = user.email;
-    
-    // Show/hide admin tab
-    const adminTab = document.querySelector('.admin-tab');
-    if (user.isAdmin) {
-        adminTab.classList.remove('hidden');
-    } else {
-        adminTab.classList.add('hidden');
+            reader.readAsDataURL(file);
+        }
     }
     
-    // Show main app
-    showAppScreen();
-}
-
-// Logout user
-function logoutUser() {
-    // Update user status to offline
-    if (window.currentUser) {
-        updateUserStatus(window.currentUser.id, 'offline');
+    // Admin Login
+    function handleAdminLogin() {
+        const username = adminUsername.value.trim();
+        const password = adminPassword.value.trim();
+        
+        if (username === 'admin' && password === 'admin123') {
+            authScreen.classList.add('hidden');
+            document.getElementById('admin-panel').classList.remove('hidden');
+            Utilities.showToast('Admin login successful!', 'success');
+        } else {
+            Utilities.showToast('Invalid admin credentials', 'error');
+        }
     }
     
-    // In a real app, this would sign out from Firebase
-    // auth.signOut().then(() => {
-    //     window.currentUser = null;
-    //     window.currentChat = null;
-    //     showAuthScreen();
-    // }).catch((error) => {
-    //     console.error('Error signing out:', error);
-    // });
+    // UI Helpers
+    function showAdminLogin() {
+        phoneAuth.classList.add('hidden');
+        emailAuth.classList.add('hidden');
+        emailSignup.classList.add('hidden');
+        otpAuth.classList.add('hidden');
+        userInfo.classList.add('hidden');
+        adminLogin.classList.remove('hidden');
+    }
     
-    window.currentUser = null;
-    window.currentChat = null;
+    function showPhoneAuth() {
+        adminLogin.classList.add('hidden');
+        phoneAuth.classList.remove('hidden');
+        phoneAuthTab.click(); // Reset to phone tab
+    }
     
-    showAuthScreen();
-}
+    function toggleCountrySelect() {
+        countrySelect.classList.toggle('hidden');
+    }
+    
+    function selectCountryCode(e) {
+        selectedCode.textContent = e.target.getAttribute('data-code');
+        selectedFlag.textContent = e.target.getAttribute('data-flag');
+        countrySelect.classList.add('hidden');
+    }
+    
+    // Logout
+    function logout() {
+        currentUser = null;
+        
+        // Reset auth screens
+        phoneAuthTab.click(); // Reset to phone tab
+        phoneAuth.classList.remove('hidden');
+        emailAuth.classList.add('hidden');
+        emailSignup.classList.add('hidden');
+        otpAuth.classList.add('hidden');
+        userInfo.classList.add('hidden');
+        adminLogin.classList.add('hidden');
+        
+        // Clear input fields
+        phoneNumber.value = '';
+        authEmail.value = '';
+        authPassword.value = '';
+        signupName.value = '';
+        signupEmail.value = '';
+        signupPassword.value = '';
+        signupConfirmPassword.value = '';
+        userName.value = '';
+        adminUsername.value = '';
+        adminPassword.value = '';
+        otpInputs.forEach(input => input.value = '');
+        
+        // Reset profile image
+        profilePreview.classList.add('hidden');
+        profilePlaceholder.classList.remove('hidden');
+        
+        // Switch back to auth screen
+        document.getElementById('chat-screen').classList.add('hidden');
+        document.getElementById('admin-panel').classList.add('hidden');
+        document.getElementById('settings-screen').classList.add('hidden');
+        document.getElementById('blocked-contacts-screen').classList.add('hidden');
+        authScreen.classList.remove('hidden');
+        
+        Utilities.showToast('Logged out successfully', 'success');
+    }
+    
+    // Public API
+    return {
+        init,
+        logout,
+        getCurrentUser: function() {
+            return currentUser;
+        }
+    };
+})();
 
-// Export functions
-window.setupAuthEventListeners = setupAuthEventListeners;
-window.loginUser = loginUser;
-window.logoutUser = logoutUser;
+// Initialize Auth module when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // This will be called from app.js to avoid initialization order issues
+});

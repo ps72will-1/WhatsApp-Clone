@@ -1,362 +1,568 @@
-// Demo data for contacts and messages (would be replaced with Firebase data)
-const demoContacts = [
-    { id: 'user2', name: 'Alice Johnson', lastMessage: 'Hey, how are you?', time: '12:30 PM', unread: 2 },
-    { id: 'user3', name: 'Bob Wilson', lastMessage: 'Can you send me the report?', time: '11:45 AM', unread: 0 },
-    { id: 'user4', name: 'Emily Davis', lastMessage: 'Meeting at 3 PM today', time: 'Yesterday', unread: 0 },
-    { id: 'user5', name: 'Michael Brown', lastMessage: 'Thanks for your help!', time: 'Yesterday', unread: 0 }
-];
-
-const demoMessages = {
-    'user2': [
-        { sender: 'user2', text: 'Hey John, how are you?', time: '12:25 PM' },
-        { sender: 'user1', text: 'I\'m good, thanks! How about you?', time: '12:26 PM' },
-        { sender: 'user2', text: 'Doing well. Do you have time for a quick call?', time: '12:28 PM' },
-        { sender: 'user1', text: 'Sure, I\'m free now.', time: '12:29 PM' },
-        { sender: 'user2', text: 'Great! I\'ll call you in 5 minutes.', time: '12:30 PM' }
-    ],
-    'user3': [
-        { sender: 'user3', text: 'Hi John, could you send me the quarterly report?', time: '11:40 AM' },
-        { sender: 'user1', text: 'Yes, I\'ll email it to you shortly.', time: '11:42 AM' },
-        { sender: 'user3', text: 'Thanks! I need it for the meeting tomorrow.', time: '11:43 AM' },
-        { sender: 'user1', text: 'No problem, I\'ll include the presentation slides as well.', time: '11:44 AM' },
-        { sender: 'user3', text: 'Can you send me the report?', time: '11:45 AM' }
-    ],
-    'user4': [
-        { sender: 'user4', text: 'Good morning John!', time: 'Yesterday' },
-        { sender: 'user1', text: 'Good morning Emily, how are you?', time: 'Yesterday' },
-        { sender: 'user4', text: 'I\'m well. Just a reminder we have a team meeting at 3 PM today.', time: 'Yesterday' },
-        { sender: 'user1', text: 'Thanks for the reminder. I\'ll be there.', time: 'Yesterday' },
-        { sender: 'user4', text: 'Meeting at 3 PM today', time: 'Yesterday' }
-    ],
-    'user5': [
-        { sender: 'user1', text: 'Hi Michael, did you fix the bug in the login page?', time: 'Yesterday' },
-        { sender: 'user5', text: 'Yes, it\'s fixed now. I pushed the changes to the repository.', time: 'Yesterday' },
-        { sender: 'user1', text: 'Great job! That was a critical issue.', time: 'Yesterday' },
-        { sender: 'user5', text: 'It was a simple fix, just needed to update the validation logic.', time: 'Yesterday' },
-        { sender: 'user5', text: 'Thanks for your help!', time: 'Yesterday' }
-    ]
-};
-
-// DOM Elements
-const contactList = document.getElementById('contact-list');
-const chatArea = document.getElementById('chat-area');
-const messageInput = document.getElementById('message-input');
-const sendButton = document.getElementById('send-message');
-const chatWithText = document.getElementById('chat-with');
-
-// Set up chat event listeners
-function setupChatEventListeners() {
-    // Send message button
-    sendButton.addEventListener('click', sendMessage);
+// Chat Module
+const Chat = (function() {
+    // Private variables
+    let currentChat = null;
+    let chats = {};
+    let contacts = {};
+    let groups = {};
+    let broadcasts = {};
+    let blockedContacts = {};
     
-    // Send message on Enter key
-    messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-}
-
-// Load contacts
-function loadContacts() {
-    contactList.innerHTML = '';
+    // DOM Elements
+    const chatItems = document.querySelectorAll('.chat-item');
+    const backToChats = document.getElementById('back-to-chats');
+    const chatHeader = document.getElementById('chat-header');
+    const currentChatAvatar = document.getElementById('current-chat-avatar');
+    const currentChatName = document.getElementById('current-chat-name');
+    const currentChatStatus = document.getElementById('current-chat-status');
+    const currentChatStatusText = document.getElementById('current-chat-status-text');
+    const chatMessages = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendMessageBtn = document.getElementById('send-message-btn');
+    const attachmentBtn = document.getElementById('attachment-btn');
+    const attachmentMenu = document.getElementById('attachment-menu');
+    const attachmentOptions = document.querySelectorAll('.attachment-option');
+    const emojiBtn = document.getElementById('emoji-btn');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const chatMenuBtn = document.getElementById('chat-menu-btn');
+    const chatMenu = document.getElementById('chat-menu');
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+    const blockContactBtn = document.getElementById('block-contact-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const newChatModal = document.getElementById('new-chat-modal');
+    const closeNewChat = document.getElementById('close-new-chat');
+    const newPrivateChat = document.getElementById('new-private-chat');
+    const newGroupChat = document.getElementById('new-group-chat');
+    const newBroadcast = document.getElementById('new-broadcast');
+    const privateChatForm = document.getElementById('private-chat-form');
+    const groupChatForm = document.getElementById('group-chat-form');
+    const broadcastForm = document.getElementById('broadcast-form');
+    const startChatBtn = document.getElementById('start-chat-btn');
+    const createGroupBtn = document.getElementById('create-group-btn');
+    const createBroadcastBtn = document.getElementById('create-broadcast-btn');
+    const blockedContactsList = document.getElementById('blocked-contacts-list');
+    const noBlockedContacts = document.getElementById('no-blocked-contacts');
     
-    demoContacts.forEach(contact => {
-        const contactElement = document.createElement('div');
-        contactElement.className = 'contact-item';
-        contactElement.dataset.userId = contact.id;
-        
-        const initials = getInitials(contact.name);
-        const unreadBadge = contact.unread > 0 ? 
-            `<span class="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">${contact.unread}</span>` : '';
-        
-        contactElement.innerHTML = `
-            <div class="contact-avatar">${initials}</div>
-            <div class="contact-info">
-                <div class="contact-name">${contact.name}</div>
-                <div class="contact-last-message">${contact.lastMessage}</div>
-            </div>
-            <div class="flex flex-col items-end">
-                <div class="contact-time">${contact.time}</div>
-                ${unreadBadge}
-            </div>
-        `;
-        
-        contactElement.addEventListener('click', () => {
-            openChat(contact);
+    // Initialize event listeners
+    function init() {
+        // Chat navigation
+        chatItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const chatId = item.getAttribute('data-chat-id');
+                handleChatItemClick(chatId);
+            });
         });
         
-        contactList.appendChild(contactElement);
-    });
-}
-
-// Open chat with a contact
-function openChat(contact) {
-    window.currentChat = contact;
-    
-    // Update active contact
-    document.querySelectorAll('.contact-item').forEach(item => {
-        if (item.dataset.userId === contact.id) {
-            item.classList.add('active');
-            // Reset unread count
-            const unreadElement = item.querySelector('.bg-green-500');
-            if (unreadElement) {
-                unreadElement.remove();
+        backToChats.addEventListener('click', backToChatList);
+        
+        // Chat actions
+        attachmentBtn.addEventListener('click', toggleAttachmentMenu);
+        emojiBtn.addEventListener('click', toggleEmojiPicker);
+        sendMessageBtn.addEventListener('click', handleSendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
             }
-            
-            // Update contact unread count
-            const contactIndex = demoContacts.findIndex(c => c.id === contact.id);
-            if (contactIndex !== -1) {
-                demoContacts[contactIndex].unread = 0;
+        });
+        
+        chatMenuBtn.addEventListener('click', handleChatMenu);
+        clearChatBtn.addEventListener('click', clearChat);
+        blockContactBtn.addEventListener('click', blockContact);
+        
+        // New chat modal
+        newChatBtn.addEventListener('click', toggleNewChatModal);
+        closeNewChat.addEventListener('click', toggleNewChatModal);
+        
+        newPrivateChat.addEventListener('click', () => switchChatForm('private'));
+        newGroupChat.addEventListener('click', () => switchChatForm('group'));
+        newBroadcast.addEventListener('click', () => switchChatForm('broadcast'));
+        
+        startChatBtn.addEventListener('click', () => {
+            Utilities.showToast('New chat created', 'success');
+            toggleNewChatModal();
+        });
+        
+        createGroupBtn.addEventListener('click', () => {
+            Utilities.showToast('New group created', 'success');
+            toggleNewChatModal();
+        });
+        
+        createBroadcastBtn.addEventListener('click', () => {
+            Utilities.showToast('New broadcast created', 'success');
+            toggleNewChatModal();
+        });
+        
+        // Populate emoji picker
+        populateEmojiPicker();
+    }
+    
+    // Handle chat selection
+    function handleChatItemClick(chatId) {
+        currentChat = chatId;
+        updateChatHeader(chatId);
+        document.body.classList.add('active-chat');
+    }
+    
+    // Update chat header with selected chat info
+    function updateChatHeader(chatId) {
+        const chatData = {
+            chat1: {
+                name: 'Lisa Johnson',
+                avatar: 'https://i.imgur.com/9qkfQfH.png',
+                status: 'online',
+                statusText: 'Online'
+            },
+            chat2: {
+                name: 'Mike Smith',
+                avatar: 'https://i.imgur.com/Jt1blLU.png',
+                status: 'offline',
+                statusText: 'Last seen today at 9:15 AM'
+            },
+            chat3: {
+                name: 'Sarah Wilson',
+                avatar: 'https://i.imgur.com/bxf3qYO.png',
+                status: 'offline',
+                statusText: 'Last seen yesterday'
+            },
+            chat4: {
+                name: 'Family Group',
+                avatar: null,
+                avatarText: 'F',
+                avatarColor: 'bg-green-600',
+                status: 'group',
+                statusText: '5 participants'
+            },
+            chat5: {
+                name: 'Work Announcements',
+                avatar: null,
+                avatarText: 'W',
+                avatarColor: 'bg-purple-600',
+                status: 'broadcast',
+                statusText: '12 recipients'
             }
-        } else {
-            item.classList.remove('active');
-        }
-    });
-    
-    // Update chat header
-    chatWithText.textContent = contact.name;
-    
-    // Load messages
-    loadMessages(contact.id);
-}
-
-// Load messages for a chat
-function loadMessages(userId) {
-    chatArea.innerHTML = '';
-    
-    const messages = demoMessages[userId] || [];
-    
-    messages.forEach(message => {
-        const isSent = message.sender === window.currentUser.id;
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${isSent ? 'message-sent' : 'message-received'}`;
-        
-        messageElement.innerHTML = `
-            <div>${message.text}</div>
-            <div class="message-time">${message.time}</div>
-        `;
-        
-        chatArea.appendChild(messageElement);
-    });
-    
-    // Scroll to bottom
-    chatArea.scrollTop = chatArea.scrollHeight;
-}
-
-// Send a message
-function sendMessage() {
-    const messageText = messageInput.value.trim();
-    
-    if (messageText === '' || !window.currentChat) {
-        return;
-    }
-    
-    // Create new message
-    const now = new Date();
-    const timeString = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' ' + (now.getHours() >= 12 ? 'PM' : 'AM');
-    
-    const newMessage = {
-        sender: window.currentUser.id,
-        text: messageText,
-        time: timeString
-    };
-    
-    // Add to demo data
-    if (!demoMessages[window.currentChat.id]) {
-        demoMessages[window.currentChat.id] = [];
-    }
-    
-    demoMessages[window.currentChat.id].push(newMessage);
-    
-    // Update last message in contacts
-    const contactIndex = demoContacts.findIndex(c => c.id === window.currentChat.id);
-    if (contactIndex !== -1) {
-        demoContacts[contactIndex].lastMessage = messageText;
-        demoContacts[contactIndex].time = timeString;
-        
-        // Move this contact to the top
-        const contact = demoContacts.splice(contactIndex, 1)[0];
-        demoContacts.unshift(contact);
-        
-        // Reload contacts
-        loadContacts();
-        
-        // Reselect current chat
-        document.querySelector(`.contact-item[data-userid="${window.currentChat.id}"]`).classList.add('active');
-    }
-    
-    // Add message to chat
-    const messageElement = document.createElement('div');
-    messageElement.className = 'message message-sent';
-    
-    messageElement.innerHTML = `
-        <div>${messageText}</div>
-        <div class="message-time">${timeString}</div>
-    `;
-    
-    chatArea.appendChild(messageElement);
-    
-    // Scroll to bottom
-    chatArea.scrollTop = chatArea.scrollHeight;
-    
-    // Clear input
-    messageInput.value = '';
-    
-    // In a real app, this would save the message to Firebase
-    // db.collection('messages').add({
-    //     chatId: generateChatId(window.currentUser.id, window.currentChat.id),
-    //     sender: window.currentUser.id,
-    //     text: messageText,
-    //     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    //     read: false
-    // }).then(() => {
-    //     // Update last message in chats collection
-    //     return db.collection('chats').doc(generateChatId(window.currentUser.id, window.currentChat.id)).set({
-    //         participants: [window.currentUser.id, window.currentChat.id],
-    //         lastMessage: messageText,
-    //         lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-    //         lastSenderId: window.currentUser.id
-    //     }, { merge: true });
-    // });
-    
-    // Simulate reply after a short delay
-    if (Math.random() > 0.5) {
-        setTimeout(() => {
-            simulateReply(window.currentChat.id);
-        }, 2000 + Math.random() * 3000);
-    }
-}
-
-// Simulate a reply message
-function simulateReply(userId) {
-    if (window.currentChat && window.currentChat.id === userId) {
-        const replyTexts = [
-            "I'll get back to you on that.",
-            "Sounds good!",
-            "Can we discuss this later?",
-            "Thanks for letting me know.",
-            "I'll check and let you know.",
-            "👍",
-            "Great idea!",
-            "I'm not sure about that."
-        ];
-        
-        const replyText = replyTexts[Math.floor(Math.random() * replyTexts.length)];
-        const now = new Date();
-        const timeString = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' ' + (now.getHours() >= 12 ? 'PM' : 'AM');
-        
-        const newMessage = {
-            sender: userId,
-            text: replyText,
-            time: timeString
         };
         
-        // Add to demo data
-        demoMessages[userId].push(newMessage);
-        
-        // Update last message in contacts
-        const contactIndex = demoContacts.findIndex(c => c.id === userId);
-        if (contactIndex !== -1) {
-            demoContacts[contactIndex].lastMessage = replyText;
-            demoContacts[contactIndex].time = timeString;
+        const chat = chatData[chatId];
+        if (chat) {
+            currentChatName.textContent = chat.name;
+            currentChatStatusText.textContent = chat.statusText;
             
-            // Move this contact to the top
-            const contact = demoContacts.splice(contactIndex, 1)[0];
-            demoContacts.unshift(contact);
+            if (chat.avatar) {
+                currentChatAvatar.src = chat.avatar;
+                currentChatAvatar.style.display = 'block';
+            } else {
+                // Handle group/broadcast avatars with initials
+                currentChatAvatar.style.display = 'none';
+                // In a real app, we would set the avatar to show initials
+            }
             
-            // Reload contacts
-            loadContacts();
-            
-            // Reselect current chat
-            document.querySelector(`.contact-item[data-userid="${window.currentChat.id}"]`).classList.add('active');
+            // Set status indicator
+            if (chat.status === 'online') {
+                currentChatStatus.classList.remove('bg-gray-400');
+                currentChatStatus.classList.add('bg-green-500');
+                currentChatStatus.style.display = 'block';
+            } else if (chat.status === 'offline') {
+                currentChatStatus.classList.remove('bg-green-500');
+                currentChatStatus.classList.add('bg-gray-400');
+                currentChatStatus.style.display = 'block';
+            } else {
+                // Groups and broadcasts don't have status indicators
+                currentChatStatus.style.display = 'none';
+            }
         }
+    }
+    
+    // Send a message
+    function handleSendMessage() {
+        const message = messageInput.value.trim();
         
-        // Add message to chat
+        if (message !== '') {
+            // Create message element
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message-bubble message-outgoing';
+            
+            // Current time
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                              now.getMinutes().toString().padStart(2, '0');
+            
+            messageElement.innerHTML = `
+                <div class="message-text">
+                    <p>${message}</p>
+                    <span class="message-time text-gray-500">
+                        ${timeString}
+                        <span class="message-status">
+                            <i class="fas fa-check status-sent"></i>
+                        </span>
+                    </span>
+                </div>
+            `;
+            
+            // Add message to chat
+            chatMessages.appendChild(messageElement);
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Simulate received message after a delay
+            setTimeout(() => {
+                simulateReceivedMessage();
+            }, 1500);
+            
+            // Simulate message status updates
+            setTimeout(() => {
+                const statusIcon = messageElement.querySelector('.message-status i');
+                statusIcon.className = 'fas fa-check-double status-delivered';
+            }, 1000);
+            
+            setTimeout(() => {
+                const statusIcon = messageElement.querySelector('.message-status i');
+                statusIcon.className = 'fas fa-check-double status-read';
+            }, 3000);
+        }
+    }
+    
+    // Simulate receiving a reply
+    function simulateReceivedMessage() {
+        if (!currentChat) return;
+        
+        // Demo responses based on chat
+        const responses = {
+            chat1: ['Sure, that sounds good!', 'I'll let you know 👍', 'Can we talk about it later?'],
+            chat2: ['OK, let me check', 'I'm busy right now, I'll call you later', 'Thanks for letting me know'],
+            chat3: ['Just sent you the picture', 'Let me know what you think', 'Do you like it?'],
+            chat4: ['Mom: Thanks for reminding everyone', 'Dad: I'll be there', 'Sister: Can't wait!'],
+            chat5: ['Alex: Meeting updated on calendar', 'Jane: Thanks for the update', 'Mark: See you all there']
+        };
+        
+        const availableResponses = responses[currentChat] || ['OK', 'Got it', 'Thanks'];
+        const randomResponse = availableResponses[Math.floor(Math.random() * availableResponses.length)];
+        
+        // Create message element
         const messageElement = document.createElement('div');
-        messageElement.className = 'message message-received';
+        messageElement.className = 'message-bubble message-incoming';
+        
+        // Current time
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
         
         messageElement.innerHTML = `
-            <div>${replyText}</div>
-            <div class="message-time">${timeString}</div>
+            <div class="message-text">
+                <p>${randomResponse}</p>
+                <span class="message-time text-gray-500">${timeString}</span>
+            </div>
         `;
         
-        chatArea.appendChild(messageElement);
+        // Add message to chat
+        chatMessages.appendChild(messageElement);
         
         // Scroll to bottom
-        chatArea.scrollTop = chatArea.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Simulate typing indicator before next message
+        currentChatStatusText.textContent = 'typing...';
+        currentChatStatusText.classList.add('typing-indicator');
+        
+        setTimeout(() => {
+            currentChatStatusText.textContent = 'Online';
+            currentChatStatusText.classList.remove('typing-indicator');
+        }, 2000);
     }
-}
-
-// Function to generate a chat ID for two users
-function generateChatId(userId1, userId2) {
-    // Sort the IDs to ensure consistency
-    const sortedIds = [userId1, userId2].sort();
-    return sortedIds.join('_');
-}
-
-// Get real-time updates (in a real app)
-function setupRealTimeListeners() {
-    // In a real app, you would listen for real-time updates
-    // Listen for messages in the current chat
-    // let unsubscribeMessages = null;
     
-    // function listenForMessages(chatId) {
-    //     // Unsubscribe from previous listener
-    //     if (unsubscribeMessages) {
-    //         unsubscribeMessages();
-    //     }
-    //     
-    //     // Listen for new messages
-    //     unsubscribeMessages = db.collection('messages')
-    //         .where('chatId', '==', chatId)
-    //         .orderBy('timestamp')
-    //         .onSnapshot((snapshot) => {
-    //             snapshot.docChanges().forEach((change) => {
-    //                 if (change.type === 'added') {
-    //                     const message = change.doc.data();
-    //                     
-    //                     // Only add new messages
-    //                     const messageTime = message.timestamp ? message.timestamp.toDate() : new Date();
-    //                     const timeString = formatTime(messageTime);
-    //                     
-    //                     // Check if this is a new message
-    //                     const messageElement = document.createElement('div');
-    //                     const isSent = message.sender === window.currentUser.id;
-    //                     messageElement.className = `message ${isSent ? 'message-sent' : 'message-received'}`;
-    //                     
-    //                     messageElement.innerHTML = `
-    //                         <div>${message.text}</div>
-    //                         <div class="message-time">${timeString}</div>
-    //                     `;
-    //                     
-    //                     chatArea.appendChild(messageElement);
-    //                     chatArea.scrollTop = chatArea.scrollHeight;
-    //                     
-    //                     // Mark as read if received and chat is open
-    //                     if (!isSent && window.currentChat && window.currentChat.id === getChatPartnerId(message.chatId)) {
-    //                         db.collection('messages').doc(change.doc.id).update({
-    //                             read: true
-    //                         });
-    //                     }
-    //                 }
-    //             });
-    //         });
-    // }
+    // UI Handlers
+    function backToChatList() {
+        document.body.classList.remove('active-chat');
+    }
     
-    // // Listen for contacts/chats
-    // db.collection('chats')
-    //     .where('participants', 'array-contains', window.currentUser.id)
-    //     .orderBy('lastMessageTime', 'desc')
-    //     .onSnapshot((snapshot) => {
-    //         // Process changes...
-    //     });
-}
+    function toggleAttachmentMenu() {
+        emojiPicker.classList.add('hidden');
+        attachmentMenu.classList.toggle('hidden');
+    }
+    
+    function toggleEmojiPicker() {
+        attachmentMenu.classList.add('hidden');
+        emojiPicker.classList.toggle('hidden');
+    }
+    
+    function handleChatMenu() {
+        chatMenu.classList.toggle('hidden');
+    }
+    
+    function clearChat() {
+        // Clear chat messages except for the encryption notice
+        const encryptionNotice = chatMessages.querySelector('.encryption-notice');
+        chatMessages.innerHTML = '';
+        if (encryptionNotice) {
+            chatMessages.appendChild(encryptionNotice);
+        }
+        
+        chatMenu.classList.add('hidden');
+        Utilities.showToast('Chat cleared', 'success');
+    }
+    
+    function blockContact() {
+        if (!currentChat) return;
+        
+        // Get current chat data
+        const chatData = {
+            chat1: {
+                name: 'Lisa Johnson',
+                avatar: 'https://i.imgur.com/9qkfQfH.png',
+                phone: '+1 555-123-4567'
+            },
+            chat2: {
+                name: 'Mike Smith',
+                avatar: 'https://i.imgur.com/Jt1blLU.png',
+                phone: '+1 555-987-6543'
+            },
+            chat3: {
+                name: 'Sarah Wilson',
+                avatar: 'https://i.imgur.com/bxf3qYO.png',
+                phone: '+1 555-567-8901'
+            }
+        };
+        
+        const chat = chatData[currentChat];
+        if (chat) {
+            // In a real app, we would update the database
+            blockedContacts[currentChat] = chat;
+            
+            // Go back to chat list on mobile
+            backToChatList();
+            
+            // Close menu
+            chatMenu.classList.add('hidden');
+            
+            // Show toast
+            Utilities.showToast(`${chat.name} has been blocked`, 'success');
+        }
+    }
+    
+    // New Chat Modal
+    function toggleNewChatModal() {
+        newChatModal.classList.toggle('hidden');
+        // Reset form view to private chat
+        newPrivateChat.click();
+    }
+    
+    function switchChatForm(formType) {
+        // Remove active class from all buttons
+        newPrivateChat.classList.remove('bg-green-500', 'text-white');
+        newGroupChat.classList.remove('bg-green-500', 'text-white');
+        newBroadcast.classList.remove('bg-green-500', 'text-white');
+        
+        newPrivateChat.classList.add('bg-gray-200', 'text-gray-700');
+        newGroupChat.classList.add('bg-gray-200', 'text-gray-700');
+        newBroadcast.classList.add('bg-gray-200', 'text-gray-700');
+        
+        // Hide all forms
+        privateChatForm.classList.add('hidden');
+        groupChatForm.classList.add('hidden');
+        broadcastForm.classList.add('hidden');
+        
+        // Show selected form and highlight button
+        if (formType === 'private') {
+            privateChatForm.classList.remove('hidden');
+            newPrivateChat.classList.remove('bg-gray-200', 'text-gray-700');
+            newPrivateChat.classList.add('bg-green-500', 'text-white');
+        } else if (formType === 'group') {
+            groupChatForm.classList.remove('hidden');
+            newGroupChat.classList.remove('bg-gray-200', 'text-gray-700');
+            newGroupChat.classList.add('bg-green-500', 'text-white');
+        } else if (formType === 'broadcast') {
+            broadcastForm.classList.remove('hidden');
+            newBroadcast.classList.remove('bg-gray-200', 'text-gray-700');
+            newBroadcast.classList.add('bg-green-500', 'text-white');
+        }
+    }
+    
+    // Blocked Contacts
+    function updateBlockedContactsList() {
+        blockedContactsList.innerHTML = '';
+        
+        // Check if there are blocked contacts
+        const blockedCount = Object.keys(blockedContacts).length;
+        
+        if (blockedCount === 0) {
+            blockedContactsList.classList.add('hidden');
+            noBlockedContacts.classList.remove('hidden');
+            return;
+        }
+        
+        // Show blocked contacts
+        blockedContactsList.classList.remove('hidden');
+        noBlockedContacts.classList.add('hidden');
+        
+        // Add each blocked contact to the list
+        for (const [id, contact] of Object.entries(blockedContacts)) {
+            const contactElement = document.createElement('div');
+            contactElement.className = 'p-4 border-b border-gray-200 flex items-center justify-between';
+            contactElement.setAttribute('data-contact-id', id);
+            
+            contactElement.innerHTML = `
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gray-200 rounded-full overflow-hidden mr-3">
+                        <img src="${contact.avatar}" alt="Contact" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h4 class="font-medium">${contact.name}</h4>
+                        <p class="text-sm text-gray-600">${contact.phone}</p>
+                    </div>
+                </div>
+                <button class="unblock-contact-btn px-3 py-1 bg-green-500 text-white rounded-lg text-sm" data-contact-id="${id}">
+                    Unblock
+                </button>
+            `;
+            
+            blockedContactsList.appendChild(contactElement);
+        }
+        
+        // Add event listeners to unblock buttons
+        const unblockButtons = document.querySelectorAll('.unblock-contact-btn');
+        unblockButtons.forEach(button => {
+            button.addEventListener('click', handleUnblockContact);
+        });
+    }
+    
+    function handleUnblockContact(e) {
+        const contactId = e.target.getAttribute('data-contact-id');
+        
+        if (contactId && blockedContacts[contactId]) {
+            const name = blockedContacts[contactId].name;
+            delete blockedContacts[contactId];
+            
+            // Update list
+            updateBlockedContactsList();
+            
+            // Show toast
+            Utilities.showToast(`${name} has been unblocked`, 'success');
+        }
+    }
+    
+    // Emoji Picker
+    function populateEmojiPicker() {
+        // Common emojis for demo
+        const emojis = ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', 
+                       '😋', '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '🙂', '🤗',
+                       '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮',
+                       '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤',
+                       '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖',
+                       '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯',
+                       '❤️', '💙', '💚', '💛', '💜', '🖤', '💔', '🔥', '👍', '👎'];
+        
+        const emojiContainer = document.getElementById('emoji-picker');
+        emojiContainer.innerHTML = '';
+        
+        emojis.forEach(emoji => {
+            const emojiBtn = document.createElement('div');
+            emojiBtn.className = 'emoji-btn';
+            emojiBtn.textContent = emoji;
+            emojiBtn.addEventListener('click', () => {
+                insertEmoji(emoji);
+            });
+            emojiContainer.appendChild(emojiBtn);
+        });
+    }
+    
+    function insertEmoji(emoji) {
+        messageInput.value += emoji;
+        messageInput.focus();
+    }
+    
+    // Demo data initialization
+    function initializeDemoData() {
+        // Initialize demo contacts
+        contacts = {
+            1: {
+                id: 1,
+                name: 'Lisa Johnson',
+                phone: '+1 555-123-4567',
+                avatar: 'https://i.imgur.com/9qkfQfH.png',
+                status: 'Hey there! I am using WhatsApp',
+                lastSeen: new Date()
+            },
+            2: {
+                id: 2,
+                name: 'Mike Smith',
+                phone: '+1 555-987-6543',
+                avatar: 'https://i.imgur.com/Jt1blLU.png',
+                status: 'Available',
+                lastSeen: new Date(Date.now() - 3600000) // 1 hour ago
+            },
+            3: {
+                id: 3,
+                name: 'Sarah Wilson',
+                phone: '+1 555-567-8901',
+                avatar: 'https://i.imgur.com/bxf3qYO.png',
+                status: 'At work',
+                lastSeen: new Date(Date.now() - 86400000) // 1 day ago
+            },
+            4: {
+                id: 4,
+                name: 'John Davis',
+                phone: '+1 555-789-1234',
+                avatar: 'https://i.imgur.com/8dLPfws.png',
+                status: 'Battery about to die',
+                lastSeen: new Date(Date.now() - 172800000) // 2 days ago
+            }
+        };
+        
+        // Initialize demo groups
+        groups = {
+            1: {
+                id: 1,
+                name: 'Family Group',
+                members: [1, 2, 3, 4],
+                avatar: null,
+                avatarText: 'F',
+                avatarColor: 'bg-green-600',
+                created: new Date(Date.now() - 7776000000) // 90 days ago
+            },
+            2: {
+                id: 2,
+                name: 'Work Team',
+                members: [1, 3, 4],
+                avatar: null,
+                avatarText: 'W',
+                avatarColor: 'bg-purple-600',
+                created: new Date(Date.now() - 2592000000) // 30 days ago
+            }
+        };
+        
+        // Initialize demo broadcasts
+        broadcasts = {
+            1: {
+                id: 1,
+                name: 'Work Announcements',
+                recipients: [1, 2, 3, 4],
+                created: new Date(Date.now() - 1296000000) // 15 days ago
+            }
+        };
+        
+        // Initialize empty blocked contacts
+        blockedContacts = {};
+    }
+    
+    // Public API
+    return {
+        init,
+        initializeDemoData,
+        updateBlockedContactsList,
+        getCurrentChat: function() {
+            return currentChat;
+        },
+        getBlockedContacts: function() {
+            return blockedContacts;
+        }
+    };
+})();
 
-// Export functions
-window.setupChatEventListeners = setupChatEventListeners;
-window.loadContacts = loadContacts;
-window.openChat = openChat;
-window.loadMessages = loadMessages;
-window.sendMessage = sendMessage;
+// Initialize Chat module when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // This will be called from app.js to avoid initialization order issues
+});

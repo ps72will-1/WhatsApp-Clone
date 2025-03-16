@@ -1,409 +1,246 @@
-// Demo call data (would be replaced with Firebase data in a real app)
-const demoCalls = [
-    { id: 'call1', userId: 'user2', name: 'Alice Johnson', type: 'video', status: 'incoming', time: '10 mins ago', duration: '5:23' },
-    { id: 'call2', userId: 'user3', name: 'Bob Wilson', type: 'audio', status: 'outgoing', time: '2 hours ago', duration: '3:45' },
-    { id: 'call3', userId: 'user2', name: 'Alice Johnson', type: 'audio', status: 'missed', time: 'Yesterday', duration: null },
-    { id: 'call4', userId: 'user4', name: 'Emily Davis', type: 'video', status: 'outgoing', time: 'Yesterday', duration: '10:12' }
-];
-
-// DOM Elements
-const callsList = document.getElementById('calls-list');
-const callActiveArea = document.getElementById('call-active-area');
-
-// Set up calls event listeners
-function setupCallsEventListeners() {
-    // New call button
-    document.getElementById('new-call-btn').addEventListener('click', () => {
-        alert('This would open the new call dialog in a real application');
-    });
-    
-    // Call buttons in chat
-    document.getElementById('call-btn').addEventListener('click', () => {
-        if (window.currentChat) {
-            switchTab('calls');
-            simulateIncomingCall(window.currentChat.id, false);
-        }
-    });
-    
-    document.getElementById('video-btn').addEventListener('click', () => {
-        if (window.currentChat) {
-            switchTab('calls');
-            simulateIncomingCall(window.currentChat.id, true);
-        }
-    });
-}
-
-// Load call history
-function loadCalls() {
-    callsList.innerHTML = '';
-    
-    demoCalls.forEach(call => {
-        const callElement = document.createElement('div');
-        callElement.className = 'call-item';
-        callElement.dataset.callId = call.id;
-        
-        const user = window.demoUsers.find(u => u.id === call.userId);
-        const initials = user ? getInitials(user.name) : '??';
-        
-        let icon = '';
-        let statusText = '';
-        let statusColor = '';
-        
-        if (call.status === 'incoming') {
-            icon = call.type === 'video' ? 'fa-video' : 'fa-phone';
-            statusText = 'Incoming';
-            statusColor = 'text-green-500';
-        } else if (call.status === 'outgoing') {
-            icon = call.type === 'video' ? 'fa-video' : 'fa-phone';
-            statusText = 'Outgoing';
-            statusColor = 'text-blue-500';
-        } else if (call.status === 'missed') {
-            icon = 'fa-phone-slash';
-            statusText = 'Missed';
-            statusColor = 'text-red-500';
-        }
-        
-        callElement.innerHTML = `
-            <div class="call-avatar">${initials}</div>
-            <div class="call-info">
-                <div class="call-name">${call.name}</div>
-                <div class="call-status ${statusColor}">
-                    <i class="fas ${icon}"></i>
-                    ${statusText} • ${call.duration ? call.duration : 'Not answered'}
-                </div>
-            </div>
-            <div class="call-time">${call.time}</div>
-        `;
-        
-        callElement.addEventListener('click', () => {
-            simulateIncomingCall(call.userId, call.type === 'video');
-        });
-        
-        callsList.appendChild(callElement);
-    });
-}
-
-// Simulate an incoming call
-function simulateIncomingCall(userId, isVideo) {
-    const user = window.demoUsers.find(u => u.id === userId);
-    if (!user) return;
-    
-    callActiveArea.innerHTML = `
-        <div class="video-container ${isVideo ? '' : 'hidden'}">
-            <div class="absolute inset-0 flex items-center justify-center">
-                <div class="text-white text-center">
-                    <div class="call-avatar bg-gray-700 mx-auto mb-4" style="width: 100px; height: 100px; font-size: 40px;">
-                        ${getInitials(user.name)}
-                    </div>
-                    <h2 class="text-2xl font-bold">${user.name}</h2>
-                    <p class="mb-4">${isVideo ? 'Video call' : 'Voice call'} in progress</p>
-                    <p class="text-sm">In a real application, this would use WebRTC for a real-time call</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="text-center ${isVideo ? 'hidden' : ''}">
-            <div class="call-avatar bg-gray-200 dark:bg-gray-700 mx-auto mb-4" style="width: 100px; height: 100px; font-size: 40px;">
-                ${getInitials(user.name)}
-            </div>
-            <h2 class="text-2xl font-bold mb-2">${user.name}</h2>
-            <p class="mb-4">Call in progress...</p>
-            <p class="text-sm opacity-70 mb-8">00:05</p>
-        </div>
-        
-        <div class="call-controls">
-            <button class="call-control-button">
-                <i class="fas fa-microphone-slash"></i>
-            </button>
-            ${isVideo ? `
-            <button class="call-control-button">
-                <i class="fas fa-video-slash"></i>
-            </button>
-            ` : ''}
-            <button class="call-control-button">
-                <i class="fas fa-volume-up"></i>
-            </button>
-            <button class="call-control-button call-end">
-                <i class="fas fa-phone-slash"></i>
-            </button>
-        </div>
-    `;
-    
-    // Add event listener to end call button
-    const endCallButton = callActiveArea.querySelector('.call-end');
-    endCallButton.addEventListener('click', () => {
-        // Reset call active area
-        callActiveArea.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-phone-alt fa-5x mb-4 opacity-50"></i>
-                <h2 class="text-xl font-bold mb-2">Start a Call</h2>
-                <p>Select a contact from the left to start a call</p>
-            </div>
-        `;
-        
-        // Add new call to history
-        const now = new Date();
-        const newCall = {
-            id: 'call' + (demoCalls.length + 1),
-            userId: userId,
-            name: user.name,
-            type: isVideo ? 'video' : 'audio',
-            status: 'outgoing',
-            time: 'Just now',
-            duration: '0:15'
-        };
-        
-        demoCalls.unshift(newCall);
-        loadCalls();
-    });
-}
-
-// WebRTC functionality for a real application
-function setupWebRTC() {
-    // This would be implemented in a real app
-    
-    // In a real app, you would have:
-    // - Local and remote video/audio streams
-    // - STUN/TURN servers configuration
-    // - Signaling through Firebase
-    // - Peer connection setup
-    // - Handling of ICE candidates
-    
-    /*
-    // WebRTC variables
+// Calls Module
+const Calls = (function() {
+    // Private variables
+    let callActive = false;
+    let callType = null;
+    let callTimer = null;
+    let callDuration = 0;
+    let peerConnection = null;
     let localStream = null;
     let remoteStream = null;
-    let peerConnection = null;
     
-    // STUN servers for WebRTC
-    const configuration = {
-        iceServers: [
-            {
-                urls: [
-                    'stun:stun1.l.google.com:19302',
-                    'stun:stun2.l.google.com:19302'
-                ]
+    // DOM Elements
+    const callAudioBtn = document.getElementById('call-audio-btn');
+    const callVideoBtn = document.getElementById('call-video-btn');
+    const callScreen = document.getElementById('call-screen');
+    const callUserAvatar = document.getElementById('call-user-avatar');
+    const callUserName = document.getElementById('call-user-name');
+    const callStatus = document.getElementById('call-status');
+    const callDurationElem = document.getElementById('call-duration');
+    const toggleSpeaker = document.getElementById('toggle-speaker');
+    const toggleMicCall = document.getElementById('toggle-mic-call');
+    const toggleVideoCall = document.getElementById('toggle-video-call');
+    const endCallBtn = document.getElementById('end-call');
+    const callVideoContainer = document.getElementById('call-video-container');
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    
+    // Initialize event listeners
+    function init() {
+        callAudioBtn.addEventListener('click', () => startCall('audio'));
+        callVideoBtn.addEventListener('click', () => startCall('video'));
+        endCallBtn.addEventListener('click', endCurrentCall);
+        toggleMicCall.addEventListener('click', toggleCallMicrophone);
+        toggleVideoCall.addEventListener('click', toggleCallVideo);
+        toggleSpeaker.addEventListener('click', toggleCallSpeaker);
+    }
+    
+    // Start a call
+    function startCall(type) {
+        const currentChat = Chat.getCurrentChat();
+        if (!currentChat) return;
+        
+        callType = type;
+        callActive = true;
+        
+        // Show call screen
+        callScreen.classList.remove('hidden');
+        
+        // Set call details based on current chat
+        const chatData = {
+            chat1: {
+                name: 'Lisa Johnson',
+                avatar: 'https://i.imgur.com/9qkfQfH.png'
+            },
+            chat2: {
+                name: 'Mike Smith',
+                avatar: 'https://i.imgur.com/Jt1blLU.png'
+            },
+            chat3: {
+                name: 'Sarah Wilson',
+                avatar: 'https://i.imgur.com/bxf3qYO.png'
             }
-        ]
-    };
-    
-    // Start local stream
-    async function startLocalStream(videoEnabled) {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: videoEnabled
-            });
+        };
+        
+        const chat = chatData[currentChat];
+        if (chat) {
+            callUserName.textContent = chat.name;
             
-            // Display in local video element
-            const localVideo = document.getElementById('local-video');
-            if (localVideo) {
+            // Set avatar
+            if (chat.avatar) {
+                callUserAvatar.innerHTML = `<img src="${chat.avatar}" alt="${chat.name}" class="w-full h-full object-cover">`;
+            } else {
+                callUserAvatar.innerHTML = `<i class="fas fa-user"></i>`;
+            }
+        }
+        
+        // Set up call based on type
+        if (type === 'audio') {
+            toggleVideoCall.classList.add('hidden');
+            callVideoContainer.classList.add('hidden');
+            // Audio call setup
+            setupMediaCall(false);
+        } else {
+            toggleVideoCall.classList.remove('hidden');
+            callVideoContainer.classList.remove('hidden');
+            // Video call setup
+            setupMediaCall(true);
+        }
+        
+        // Simulate call connecting
+        setTimeout(() => {
+            callStatus.textContent = 'Connected';
+            callDurationElem.classList.remove('hidden');
+            
+            // Start call timer
+            callDuration = 0;
+            callTimer = setInterval(() => {
+                callDuration++;
+                const minutes = Math.floor(callDuration / 60).toString().padStart(2, '0');
+                const seconds = (callDuration % 60).toString().padStart(2, '0');
+                callDurationElem.textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }, 2000);
+    }
+    
+    // End the current call
+    function endCurrentCall() {
+        // Stop timer
+        if (callTimer) {
+            clearInterval(callTimer);
+            callTimer = null;
+        }
+        
+        // Stop media streams
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        
+        // Close WebRTC connection
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+        
+        // Reset call state
+        callActive = false;
+        callType = null;
+        callDuration = 0;
+        
+        // Hide call screen
+        callScreen.classList.add('hidden');
+        
+        // Reset call UI
+        callStatus.textContent = 'Calling...';
+        callDurationElem.classList.add('hidden');
+        callDurationElem.textContent = '00:00';
+        toggleVideoCall.classList.remove('camera-off');
+        toggleMicCall.classList.remove('muted');
+        toggleSpeaker.classList.remove('active');
+    }
+    
+    // Setup media for call
+    async function setupMediaCall(isVideo) {
+        try {
+            // Get user media
+            const constraints = {
+                audio: true,
+                video: isVideo
+            };
+            
+            localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            // Show local video if this is a video call
+            if (isVideo) {
                 localVideo.srcObject = localStream;
             }
             
-            return localStream;
-        } catch (error) {
-            console.error('Error starting local stream:', error);
-            return null;
-        }
-    }
-    
-    // Create peer connection
-    function createPeerConnection() {
-        peerConnection = new RTCPeerConnection(configuration);
-        
-        // Add local stream tracks
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
-        
-        // Set up remote stream
-        remoteStream = new MediaStream();
-        const remoteVideo = document.getElementById('remote-video');
-        if (remoteVideo) {
-            remoteVideo.srcObject = remoteStream;
-        }
-        
-        // Add remote tracks when they arrive
-        peerConnection.ontrack = event => {
-            event.streams[0].getTracks().forEach(track => {
-                remoteStream.addTrack(track);
-            });
-        };
-        
-        // Handle ICE candidates
-        peerConnection.onicecandidate = event => {
-            if (event.candidate) {
-                // Send candidate to peer via Firebase
-                const callId = document.getElementById('call-container').dataset.callId;
-                db.collection('calls').doc(callId).collection('candidates').add({
-                    userId: window.currentUser.id,
-                    candidate: event.candidate.toJSON(),
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
+            // In a real app, we would set up WebRTC connection here
+            // For demo purposes, we'll simulate a connection
+            
+            if (isVideo) {
+                // Simulate remote video after a delay
+                setTimeout(() => {
+                    // For demo, we'll just mirror the local stream as the remote stream
+                    remoteVideo.srcObject = localStream;
+                }, 2000);
             }
-        };
+        } catch (err) {
+            console.error('Error accessing media devices:', err);
+            Utilities.showToast('Failed to access camera/microphone', 'error');
+            endCurrentCall();
+        }
+    }
+    
+    // Toggle microphone
+    function toggleCallMicrophone() {
+        if (!localStream) return;
         
-        return peerConnection;
-    }
-    
-    // Make offer
-    async function makeOffer(userId) {
-        try {
-            // Create call document
-            const callData = {
-                fromUser: window.currentUser.id,
-                toUser: userId,
-                status: 'pending',
-                type: document.getElementById('video-enabled').checked ? 'video' : 'audio',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            const callRef = await db.collection('calls').add(callData);
-            const callId = callRef.id;
-            
-            // Store call ID
-            document.getElementById('call-container').dataset.callId = callId;
-            
-            // Create offer
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            
-            // Save offer to Firebase
-            await db.collection('calls').doc(callId).update({
-                offer: {
-                    type: offer.type,
-                    sdp: offer.sdp
-                }
-            });
-            
-            // Listen for answer
-            db.collection('calls').doc(callId)
-                .onSnapshot(async (snapshot) => {
-                    const data = snapshot.data();
-                    if (!peerConnection.currentRemoteDescription && data.answer) {
-                        const answerDescription = new RTCSessionDescription(data.answer);
-                        await peerConnection.setRemoteDescription(answerDescription);
-                    }
-                });
-            
-            // Listen for remote ICE candidates
-            db.collection('calls').doc(callId).collection('candidates')
-                .where('userId', '==', userId)
-                .onSnapshot((snapshot) => {
-                    snapshot.docChanges().forEach(async (change) => {
-                        if (change.type === 'added') {
-                            const data = change.doc.data();
-                            try {
-                                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                            } catch (error) {
-                                console.error('Error adding ICE candidate:', error);
-                            }
-                        }
-                    });
-                });
-            
-            return callId;
-        } catch (error) {
-            console.error('Error making offer:', error);
-            return null;
-        }
-    }
-    
-    // Answer call
-    async function answerCall(callId) {
-        try {
-            // Store call ID
-            document.getElementById('call-container').dataset.callId = callId;
-            
-            // Get call data
-            const callDoc = await db.collection('calls').doc(callId).get();
-            const callData = callDoc.data();
-            
-            // Set remote description from offer
-            const offerDescription = new RTCSessionDescription(callData.offer);
-            await peerConnection.setRemoteDescription(offerDescription);
-            
-            // Create answer
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            
-            // Update call with answer
-            await db.collection('calls').doc(callId).update({
-                answer: {
-                    type: answer.type,
-                    sdp: answer.sdp
-                },
-                status: 'connected'
-            });
-            
-            // Listen for remote ICE candidates
-            db.collection('calls').doc(callId).collection('candidates')
-                .where('userId', '==', callData.fromUser)
-                .onSnapshot((snapshot) => {
-                    snapshot.docChanges().forEach(async (change) => {
-                        if (change.type === 'added') {
-                            const data = change.doc.data();
-                            try {
-                                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                            } catch (error) {
-                                console.error('Error adding ICE candidate:', error);
-                            }
-                        }
-                    });
-                });
-            
-            return true;
-        } catch (error) {
-            console.error('Error answering call:', error);
-            return false;
-        }
-    }
-    
-    // End call
-    async function endCall() {
-        // Get call ID
-        const callId = document.getElementById('call-container').dataset.callId;
-        if (!callId) return false;
+        const audioTracks = localStream.getAudioTracks();
+        if (audioTracks.length === 0) return;
         
-        try {
-            // Update call status
-            await db.collection('calls').doc(callId).update({
-                status: 'ended',
-                endTime: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            // Close peer connection
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-            
-            // Stop local stream
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            
-            // Reset UI
-            document.getElementById('call-container').innerHTML = `
-                <div class="text-center">
-                    <i class="fas fa-phone-alt fa-5x mb-4 opacity-50"></i>
-                    <h2 class="text-xl font-bold mb-2">Start a Call</h2>
-                    <p>Select a contact from the left to start a call</p>
-                </div>
-            `;
-            
-            return true;
-        } catch (error) {
-            console.error('Error ending call:', error);
-            return false;
+        const enabled = !audioTracks[0].enabled;
+        audioTracks[0].enabled = enabled;
+        
+        // Update UI
+        if (enabled) {
+            toggleMicCall.classList.remove('muted');
+            toggleMicCall.style.backgroundColor = '#555';
+            toggleMicCall.innerHTML = '<i class="fas fa-microphone"></i>';
+        } else {
+            toggleMicCall.classList.add('muted');
+            toggleMicCall.style.backgroundColor = '#FF4B4B';
+            toggleMicCall.innerHTML = '<i class="fas fa-microphone-slash"></i>';
         }
     }
-    */
-}
+    
+    // Toggle video
+    function toggleCallVideo() {
+        if (!localStream || callType !== 'video') return;
+        
+        const videoTracks = localStream.getVideoTracks();
+        if (videoTracks.length === 0) return;
+        
+        const enabled = !videoTracks[0].enabled;
+        videoTracks[0].enabled = enabled;
+        
+        // Update UI
+        if (enabled) {
+            toggleVideoCall.classList.remove('camera-off');
+            toggleVideoCall.style.backgroundColor = '#555';
+            toggleVideoCall.innerHTML = '<i class="fas fa-video"></i>';
+        } else {
+            toggleVideoCall.classList.add('camera-off');
+            toggleVideoCall.style.backgroundColor = '#FF4B4B';
+            toggleVideoCall.innerHTML = '<i class="fas fa-video-slash"></i>';
+        }
+    }
+    
+    // Toggle speaker
+    function toggleCallSpeaker() {
+        // In a real app, this would toggle between earpiece and speakerphone
+        // For demo purposes, we'll just toggle the button state
+        toggleSpeaker.classList.toggle('active');
+        
+        if (toggleSpeaker.classList.contains('active')) {
+            toggleSpeaker.style.backgroundColor = '#22C55E';
+        } else {
+            toggleSpeaker.style.backgroundColor = '#555';
+        }
+        
+        Utilities.showToast('Speaker ' + (toggleSpeaker.classList.contains('active') ? 'on' : 'off'), 'info');
+    }
+    
+    // Public API
+    return {
+        init,
+        startCall,
+        endCurrentCall
+    };
+})();
 
-// Export functions
-window.setupCallsEventListeners = setupCallsEventListeners;
-window.loadCalls = loadCalls;
-window.simulateIncomingCall = simulateIncomingCall;
+// Initialize Calls module when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // This will be called from app.js to avoid initialization order issues
+});
