@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* General Styles */
+body {
+  @apply bg-gray-100 font-sans;
+}
+
+.dark body {
+  @apply bg-dark-bg;
+}
+
+/* Message Bubbles */
+.message-bubble {
+  @apply relative p-2 rounded-lg max-w-[65%] mb-2 shadow-message;
+}
+
+.message-outgoing {
+  @apply bg-chat-outgoing ml-auto rounded-tr-none;
+}
+
+.message-incoming {
+  @apply bg-chat-incoming mr-auto rounded-tl-none;
+}
+
+.dark .message-outgoing {
+  @apply bg-dark-chat-outgoing;
+}
+
+.dark .message-incoming {
+  @apply bg-dark-chat-incoming;
+}
+
+/* Input Fields */
+.input-field {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-base;
+}
+
+.dark .input-field {
+  @apply bg-dark-panel border-gray-700 text-white;
+}
+
+/* Buttons */
+.btn {
+  @apply font-semibold py-2 px-4 rounded-lg transition-colors duration-300;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+}
+
+.dark .btn-secondary {
+  @apply bg-dark-panel text-gray-200 hover:bg-dark-hover;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gray-700;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
+}
+
+/* Auth forms */
+.auth-form {
+  @apply w-full max-w-md mx-auto bg-white rounded-lg shadow-md p-6 border border-gray-200;
+}
+
+.dark .auth-form {
+  @apply bg-dark-panel border-gray-700;
+}
+
+/* Nav tabs */
+.nav-tab {
+  @apply flex-1 py-4 text-center font-medium;
+}
+
+.nav-tab.active {
+  @apply text-primary border-b-2 border-primary;
+}
+
+.nav-tab:not(.active) {
+  @apply text-gray-600 hover:bg-gray-100;
+}
+
+.dark .nav-tab:not(.active) {
+  @apply text-gray-400 hover:bg-dark-hover;
+}
+
+/* Status Indicators */
+.status-online {
+  @apply bg-green-500;
+}
+
+.status-offline {
+  @apply bg-gray-400;
+}

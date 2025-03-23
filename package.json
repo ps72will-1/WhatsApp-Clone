@@ -1,0 +1,32 @@
+{
+    "name": "whatsapp-clone",
+    "version": "1.0.0",
+    "description": "WhatsApp Clone with MERN Stack",
+    "main": "index.js",
+    "scripts": {
+      "start": "cd server && npm start",
+      "server": "cd server && npm run dev",
+      "client": "cd client && npm start",
+      "dev": "concurrently \"npm run server\" \"npm run client\"",
+      "install-server": "cd server && npm install",
+      "install-client": "cd client && npm install",
+      "install-all": "npm install && npm run install-server && npm run install-client",
+      "build-client": "cd client && npm run build",
+      "docker-build": "docker-compose build",
+      "docker-up": "docker-compose up -d",
+      "docker-down": "docker-compose down"
+    },
+    "keywords": [
+      "whatsapp",
+      "clone",
+      "mern",
+      "react",
+      "node",
+      "mongodb"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+      "concurrently": "^7.6.0"
+    }
+  }
